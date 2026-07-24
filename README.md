@@ -387,6 +387,18 @@ This project is intended for educational, learning, and portfolio purposes.
 
 ---
 
-## 👨‍💻 Author
+---
 
-Built with ❤️ using React, FastAPI, LangGraph, Groq, and ChromaDB.
+<div align="center">
+
+## 🤖 Built by Girish Jain
+
+Making personal finance smarter with AI, RAG, and real-time market intelligence.
+
+From stock insights to budget planning — your financial copilot is just one prompt away.
+
+⭐ Don't forget to star the repository.
+
+</div>
+
+---
