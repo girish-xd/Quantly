@@ -35,17 +35,25 @@ def build_agent(context: str = ""):
 
     return agent
 
-def run_agent(user_input: str) -> str:
-    context = get_relevant_context(user_input)
+from utils.context import session_id_context
+from typing import Optional
+
+
+def run_agent(user_input: str, session_id: Optional[str] = None) -> str:
+    active_session_id = session_id or session_id_context.get(None)
+
+    context = get_relevant_context(active_session_id, user_input) if active_session_id else ""
 
     agent_graph = build_agent(context)
 
     res = agent_graph.invoke({"messages": [("user", user_input)]})
     response_text = res["messages"][-1].content
 
-    add_conversation(user_input, response_text)
+    if active_session_id:
+        add_conversation(active_session_id, user_input, response_text)
 
     return response_text
+
 
 # print(run_agent("What is the stock price of AAPL?"))
 # """You are an expert financial analyst. 

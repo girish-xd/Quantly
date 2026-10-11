@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { ChatWindow } from "./components/ChatWindow";
 
@@ -8,31 +8,74 @@ interface Message {
   timestamp: Date;
 }
 
-// const SESSION_ID = "session_123";
-
 export default function App() {
-  const [sessionId] = useState(() => crypto.randomUUID());
-
+  const [sessionId, setSessionId] = useState<string>("");
+  const [sessionToken, setSessionToken] = useState<string>("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
+  // Ref to hold pending initialization promise to prevent duplicate requests
+  const initPromiseRef = useRef<Promise<{ id: string; token: string }> | null>(null);
+
+  const getOrInitSession = async (): Promise<{ id: string; token: string }> => {
+    if (sessionId && sessionToken) {
+      return { id: sessionId, token: sessionToken };
+    }
+
+    if (initPromiseRef.current) {
+      return initPromiseRef.current;
+    }
+
+    initPromiseRef.current = (async () => {
+      try {
+        const response = await axios.post("http://localhost:8000/session");
+        const newId = response.data.session_id;
+        const newToken = response.data.session_token;
+        setSessionId(newId);
+        setSessionToken(newToken);
+        return { id: newId, token: newToken };
+      } catch (err) {
+        console.error("Failed to acquire server session:", err);
+        throw err;
+      } finally {
+        initPromiseRef.current = null;
+      }
+    })();
+
+    return initPromiseRef.current;
+  };
+
+  useEffect(() => {
+    getOrInitSession().catch(() => {
+      // Handled lazily if server is temporarily unreachable on startup
+    });
+  }, []);
+
   const sendMessage = async (text: string) => {
-    // Is the assistant is responding, user cannot send the messages
     if (isLoading) return;
 
     setMessages((prev) => [
       ...prev,
       { role: "user", content: text, timestamp: new Date() },
-    ]); //Append the user message to message list
-    setIsLoading(true); //assistant will be responding when the user sends a message
+    ]);
+    setIsLoading(true);
 
     try {
-      const response = await axios.post("http://localhost:8000/chat", {
-        message: text,
-        session_id: sessionId,
-      });
+      const { id, token } = await getOrInitSession();
+      const response = await axios.post(
+        "http://localhost:8000/chat",
+        {
+          message: text,
+          session_id: id,
+          session_token: token,
+        },
+        {
+          headers: {
+            "X-Session-Token": token,
+          },
+        }
+      );
 
-      // Append the assistant's response to the message list
       setMessages((prev) => [
         ...prev,
         {
@@ -59,30 +102,30 @@ export default function App() {
   const handleUpload = async (file: File) => {
     if (isLoading) return;
 
-    // 1. Instantly inject user placeholder message for the upload action
     setMessages((prev) => [
       ...prev,
       { role: "user", content: `${file.name} uploaded`, timestamp: new Date() },
     ]);
     setIsLoading(true);
 
-    // 2. Build the multipart/form-data payload
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("session_id", sessionId);
-
     try {
+      const { id, token } = await getOrInitSession();
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("session_id", id);
+      formData.append("session_token", token);
+
       const response = await axios.post(
         "http://localhost:8000/upload",
         formData,
         {
           headers: {
             "Content-Type": "multipart/form-data",
+            "X-Session-Token": token,
           },
-        },
+        }
       );
 
-      // 3. Inject the successful assistant response matching the /chat format
       setMessages((prev) => [
         ...prev,
         {
@@ -105,6 +148,7 @@ export default function App() {
       setIsLoading(false);
     }
   };
+
 
   return (
     <ChatWindow
