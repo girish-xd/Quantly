@@ -13,7 +13,6 @@ def get_stock_price(ticker: str) -> str:
     clean_ticker = ticker.strip().upper()
     try:
         dat = yf.Ticker(clean_ticker)
-        
         # 1. Try fast_info (faster and more reliable in modern yfinance)
         price = None
         currency = None

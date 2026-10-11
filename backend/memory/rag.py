@@ -23,4 +23,3 @@ def get_relevant_context(session_id: Optional[str], user_message: str) -> str:
     joined_results = "\n---\n".join(valid_docs)
 
     return f"Relevant past conversations:\n{joined_results}"
-
