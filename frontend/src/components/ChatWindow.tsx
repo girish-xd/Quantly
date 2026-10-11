@@ -19,7 +19,7 @@ export const ChatWindow = ({
   onSend,
   onUpload,
 }: ChatWindowProps) => {
-  const messagesEndRef = useRef(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll when a new message appears
   useEffect(() => {
@@ -32,7 +32,7 @@ export const ChatWindow = ({
     <div className="w-full h-[100dvh] bg-[#0D0F14] overflow-hidden relative text-[#E8ECF4]">
       <AnimatePresence mode="wait">
         {isEmpty ? (
-          <EmptyState onSend={onSend} isLoading={isLoading} />
+          <EmptyState onSend={onSend} isLoading={isLoading} onUpload={onUpload} />
         ) : (
           <motion.div
             key="chat-interface"
